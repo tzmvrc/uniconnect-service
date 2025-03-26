@@ -32,7 +32,7 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins, // Allow multiple frontend URLs
+    origin: "*", // Allow multiple frontend URLs
     credentials: true, // Allow cookies/auth headers
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
