@@ -395,7 +395,10 @@ const resetPassword = async (req, res) => {
 const getSavedForums = async (req, res) => {
   try {
     const userId = req.user.userId; // Assuming req.user contains the authenticated user
-    const user = await UserModel.findById(userId).populate("savedForums");
+    const user = await UserModel.findById(userId).populate({
+      path: "savedForums",
+      match: { isArchived: false }, // Only get forums that are not archived
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -407,6 +410,9 @@ const getSavedForums = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+
 
 const getForumVotes = async (req, res) => {
   try {
