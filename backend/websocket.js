@@ -1,8 +1,9 @@
 /** @format */
 
 const WebSocket = require("ws");
-require("dotenv").config();
 const mongoose = require("mongoose");
+require("dotenv").config();
+
 const Response = require("./APP/models/responses_model"); // Import Response model
 
 function setupWebSocket(server) {
