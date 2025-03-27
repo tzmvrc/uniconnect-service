@@ -17,8 +17,16 @@ const getUserInfo = async (req, res) => {
       "school_id",
       "school_name"
     );
+
     if (!isUser) {
       return res.status(404).json({ error: true, message: "User not found" });
+    }
+
+    if (isUser.isDeleted) {
+      return res.status(403).json({
+        error: true,
+        message: "This account has been deleted.",
+      });
     }
 
     return res.json({
@@ -56,6 +64,13 @@ const getOtherUserInfo = async (req, res) => {
       return res.status(404).json({ error: true, message: "User not found" });
     }
 
+    if (user.isDeleted) {
+      return res.status(403).json({
+        error: true,
+        message: "This account has been deleted.",
+      });
+    }
+
     // Fetch additional forums created by the user
     const forums = await getForumsByUser(user._id);
 
@@ -74,7 +89,6 @@ const getOtherUserInfo = async (req, res) => {
       },
       message: "User retrieved successfully",
     });
-
   } catch (error) {
     console.error("Error fetching user:", error);
     return res.status(500).json({ error: true, message: "Server error" });
@@ -96,7 +110,6 @@ const getForumsByUser = async (userId) => {
   }
 };
 
-
 // Signup function
 const signup = async (req, res) => {
   try {
@@ -112,12 +125,14 @@ const signup = async (req, res) => {
           "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a digit, and a special character.",
       });
     }
+
     // Check if the school exists
     const school = await SchoolModel.findOne({ school_name });
 
-    // Check if email or username already exists
+    // Check if email or username already exists, excluding soft-deleted users
     const existingUser = await UserModel.findOne({
       $or: [{ email }, { username }],
+      isDeleted: { $ne: true }, // Exclude soft-deleted users
     });
 
     if (existingUser) {
@@ -141,6 +156,7 @@ const signup = async (req, res) => {
       username,
       password: hashedPassword,
       email,
+      isDeleted: false, // Ensure new users start as active
     });
 
     await newUser.save();
@@ -229,12 +245,13 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await UserModel.findOne({ email });
+    // Find only users where isDeleted is explicitly false
+    const user = await UserModel.findOne({ email, isDeleted: false });
 
     if (!user) {
       return res.status(404).send({
         successful: false,
-        message: "User not found",
+        message: "User not found or has been deleted.",
       });
     }
 
@@ -242,7 +259,7 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).send({
         successful: false,
-        message: "Incorrect Password",
+        message: "Incorrect password.",
       });
     }
 
@@ -271,6 +288,7 @@ const login = async (req, res) => {
     });
   }
 };
+
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
@@ -313,25 +331,61 @@ const forgotPassword = async (req, res) => {
 };
 
 const updateUserPass = async (req, res) => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
   try {
-    const { email, password } = req.body;
-    const user = await UserModel.findOne({ email });
+    const userId = req.user.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        successful: false,
+        message: "Current password and new password are required.",
+      });
+    }
+
+    const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).send({
+      return res.status(404).json({
         successful: false,
         message: "User not found.",
       });
     }
-    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        successful: false,
+        message: "Current password is incorrect.",
+      });
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        successful: false,
+        message: "New password cannot be the same as the current password.",
+      });
+    }
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        successful: false,
+        message:
+          "New password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
     user.password = hashedPassword;
     await user.save();
-    return res.status(200).send({
+
+    return res.status(200).json({
       successful: true,
       message: "Password has been updated successfully.",
     });
   } catch (error) {
     console.error("Update password error:", error);
-    return res.status(500).send({
+    return res.status(500).json({
       successful: false,
       message: "An error occurred. Please try again later.",
     });
@@ -397,7 +451,7 @@ const getSavedForums = async (req, res) => {
     const userId = req.user.userId; // Assuming req.user contains the authenticated user
     const user = await UserModel.findById(userId).populate({
       path: "savedForums",
-      match: { isArchived: false }, // Only get forums that are not archived
+      match: { isArchived: false },
     });
 
     if (!user) {
@@ -410,9 +464,6 @@ const getSavedForums = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-
 
 const getForumVotes = async (req, res) => {
   try {
@@ -484,7 +535,6 @@ const refreshAccessToken = async (req, res) => {
     });
   }
 };
-
 
 const editUserProfile = async (req, res) => {
   try {
@@ -569,7 +619,61 @@ const editUserProfile = async (req, res) => {
   }
 };
 
+const deleteOwnAccount = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { password } = req.body;
 
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password is required to delete your account.",
+      });
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.isDeleted) {
+      return res.status(400).json({
+        success: false,
+        message: "This account has already been deleted.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect password. Account deletion failed.",
+      });
+    }
+
+    user.isDeleted = true;
+
+    // Optionally remove sensitive data
+    //user.email = `deleted_${Date.now()}@example.com`; // Replace email with a dummy value
+    user.username = `deleted_user_${Date.now()}`; // Replace username
+    // user.password = undefined; // Clear the password
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Your account has been successfully deleted.",
+    });
+  } catch (error) {
+    console.error("Delete account error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again later.",
+    });
+  }
+};
 
 module.exports = {
   getUserInfo,
@@ -584,5 +688,6 @@ module.exports = {
   getForumVotes,
   refreshAccessToken,
   editUserProfile,
-  getOtherUserInfo
+  getOtherUserInfo,
+  deleteOwnAccount,
 };

@@ -13,7 +13,7 @@ router.post("/forgot-password", userController.forgotPassword);
 router.post("/reset-password", userController.resetPassword);
 router.get("/check-if-verified/:email", userController.checkIfVerified);
 router.get("/check-user-badge/:username", userController.checkUserBadge);
-router.put("/update-user-pass", userController.updateUserPass);
+router.put("/update-user-pass", authMiddleware, userController.updateUserPass);
 router.put("/update", authMiddleware, userController.editUserProfile);
 router.get("/saved-forums", authMiddleware, userController.getSavedForums);
 router.get(
@@ -22,6 +22,7 @@ router.get(
   userController.getForumVotes
 );
 router.get("/:username", authMiddleware, userController.getOtherUserInfo);
+router.delete("/delete-acct", authMiddleware, userController.deleteOwnAccount);
 //http://localhost:8000/users/1
 //TAKE NOTE: MULTIPLE ROUTERS WITH SAME ENDPOINTS ARE ALLOWED ONLY IF THE HTTP METHODS ARE DIFFERENT FOR EACH.
 

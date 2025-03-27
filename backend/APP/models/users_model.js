@@ -45,6 +45,10 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isDeleted: { 
+      type: Boolean, 
+      default: false 
+    },
     topics: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "topics",
