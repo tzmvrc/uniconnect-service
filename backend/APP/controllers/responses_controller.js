@@ -1,3 +1,5 @@
+/** @format */
+
 const Response = require("../models/responses_model");
 const Forum = require("../models/forums_model");
 const mongoose = require("mongoose");
@@ -188,15 +190,16 @@ const likeResponse = async (req, res) => {
     }
 
     let notificationCreated = false;
+    let pointsChanged = false;
 
-    // If user already liked, remove the like (unlike)
+    // ✅ Toggle like (if already liked, remove it)
     if (response.liked_by.includes(userId)) {
       response.liked_by = response.liked_by.filter(
         (id) => id.toString() !== userId
       );
       response.likes -= 1;
     } else {
-      // Remove dislike if previously disliked
+      // ✅ Remove dislike if previously disliked
       if (response.disliked_by.includes(userId)) {
         response.disliked_by = response.disliked_by.filter(
           (id) => id.toString() !== userId
@@ -204,38 +207,46 @@ const likeResponse = async (req, res) => {
         response.dislikes -= 1;
       }
 
-      // Add like
+      // ✅ Add like
       response.liked_by.push(userId);
       response.likes += 1;
+      pointsChanged = true;
 
-      // ✅ Create Notification if valid
+      // ✅ Create notification asynchronously
       if (response.created_by.toString() !== userId) {
-        await Notification.create({
-          userId: response.created_by,
-          type: "response_like",
-          sourceId: response._id,
-          sourceType: "response",
-          senderId: userId,
-        });
         notificationCreated = true;
       }
     }
 
-    // ✅ Save the updated response
+    // ✅ Save updated response
     await response.save();
 
-    // ✅ Calculate and save updated user points
-    const points = await calculateUserPoints(response.created_by);
+    let updatedPoints = null;
 
-    res.status(200).json({ 
-      message: "Response updated", 
-      response, 
+    if (pointsChanged) {
+      updatedPoints = await calculateUserPoints(response.created_by);
+    }
+
+    // ✅ Send response
+    res.status(200).json({
+      message: "Response updated",
+      response,
       notificationCreated,
-      updatedPoints: points,
+      updatedPoints,
     });
 
+    // ✅ Create notification (async, does not block response)
+    if (notificationCreated) {
+      await Notification.create({
+        userId: response.created_by,
+        type: "response_like",
+        sourceId: response._id,
+        sourceType: "response",
+        senderId: userId,
+      });
+    }
   } catch (error) {
-    console.error("Error in likeResponse:", error);
+    console.error("❌ Error in likeResponse:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -294,13 +305,12 @@ const dislikeResponse = async (req, res) => {
     // ✅ Calculate and save updated user points
     const points = await calculateUserPoints(response.created_by);
 
-    res.status(200).json({ 
-      message: "Response updated", 
-      response, 
+    res.status(200).json({
+      message: "Response updated",
+      response,
       notificationCreated,
-      updatedPoints: points 
+      updatedPoints: points,
     });
-
   } catch (error) {
     console.error("Error in dislikeResponse:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -371,30 +381,34 @@ const getResponsesByOwner = async (req, res) => {
 
 const calculateUserPoints = async (userId) => {
   try {
-    const responses = await Response.find({ created_by: userId });
-
-    if (responses.length === 0) {
-      return 0;
-    }
+    const responses = await Response.find({
+      created_by: userId,
+      isArchived: false,
+    });
 
     let totalLikes = 0;
     let totalDislikes = 0;
-
-    //console.log("Responses:", JSON.stringify(responses)); // Debugging log
 
     responses.forEach((response) => {
       totalLikes += response.likes;
       totalDislikes += response.dislikes;
     });
 
-    // Avoid division by zero; points should remain unchanged if no votes
-    const points =
-      totalLikes + totalDislikes > 0
-        ? Math.round((totalLikes - totalDislikes) / responses.length)
-        : 0;
+   const points = Math.max(
+     0,
+     Math.round(
+       totalLikes >= totalDislikes
+         ? (totalLikes - totalDislikes) * 0.5 + responses.length * 2 // ✅ Normal calculation
+         : (totalLikes - totalDislikes) * 0.8 + responses.length * 1.5 // ❌ Harsher penalty if dislikes are higher
+     )
+   );
 
+
+
+    // ✅ Check if user qualifies for a badge
     const hasBadge = points >= 100;
 
+    // ✅ Update user document
     const user = await User.findById(userId);
     if (user) {
       user.points = points;
@@ -404,20 +418,20 @@ const calculateUserPoints = async (userId) => {
 
     return points;
   } catch (error) {
-    console.error("Error computing user points:", error);
+    console.error("❌ Error computing user points:", error);
     throw error;
   }
 };
 
-(module.exports = {
-    createResponse,
-    getResponsesByForum,
-    updateResponse,
-    deleteResponse,
-    likeResponse,
-    dislikeResponse,
-    getResponseCount,
-    getResponseVotes,
-    getResponsesByOwner,
-    calculateUserPoints,
-});
+module.exports = {
+  createResponse,
+  getResponsesByForum,
+  updateResponse,
+  deleteResponse,
+  likeResponse,
+  dislikeResponse,
+  getResponseCount,
+  getResponseVotes,
+  getResponsesByOwner,
+  calculateUserPoints,
+};
