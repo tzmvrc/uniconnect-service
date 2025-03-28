@@ -4,7 +4,7 @@ const Users = require("../models/users_model");
 
 const getUsersLeaderboard = async (req, res) => {
   try {
-    const leaderboard = await Users.find({ has_badge: true })
+    const leaderboard = await Users.find({ has_badge: true, isDeleted: false })
       .sort({ points: -1 })
       .limit(10)
       .select("first_name last_name username points has_badge");
