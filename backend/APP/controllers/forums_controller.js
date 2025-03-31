@@ -203,7 +203,7 @@ const getAllForums = async (req, res) => {
   try {
     // Retrieve only non-archived forums
     const forums = await Forum.find({ isArchived: false })
-      .populate("created_by", "username first_name last_name")
+      .populate("created_by", "username first_name last_name profilePicture")
       .populate("topic_id", "name display");
 
     if (forums.length === 0) {
@@ -221,7 +221,7 @@ const getAllForums = async (req, res) => {
 const viewForum = async (req, res) => {
   try {
     const forum = await Forum.findById(req.params.forum_id)
-      .populate("created_by", "username first_name last_name") // Populate author's username
+      .populate("created_by", "username first_name last_name profilePicture") // Populate author's username
       .populate("topic_id", "name"); // Populate topic name
 
     if (!forum) {
@@ -452,16 +452,21 @@ const getForumsByOwner = async (req, res) => {
 
 const getForumsByOtherUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { username } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+    if (!username) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+
+    const user = await User.findOne({ username }).select("_id");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
     const forums = await Forum.find({
-      created_by: userId,
-      isArchived: false,
+      created_by: user._id,
       public: true,
+      isArchived: false,
     })
       .select("title description createdAt")
       .sort({ createdAt: -1 });

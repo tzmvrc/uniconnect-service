@@ -19,8 +19,7 @@ router.post("/:forum_id/dislike", authMiddleware, forumsController.dislikeForum)
 router.post("/:forum_id/save", authMiddleware, forumsController.saveForum);
 router.delete("/:forum_id/unsave", authMiddleware, forumsController.unsaveForum);
 router.get("/owner/history",authMiddleware, forumsController.getForumsByOwner);
-
-
+router.get("/user/:username",authMiddleware, forumsController.getForumsByOtherUser);
 
 //http://localhost:8000/users/1
 //TAKE NOTE: MULTIPLE ROUTERS WITH SAME ENDPOINTS ARE ALLOWED ONLY IF THE HTTP METHODS ARE DIFFERENT FOR EACH.

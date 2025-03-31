@@ -1,3 +1,5 @@
+/** @format */
+
 const mongoose = require("mongoose");
 const User = require("../models/users_model");
 const Announcements = require("../models/announcements_model");
@@ -39,7 +41,7 @@ const getAllAnnouncements = async (req, res) => {
     const filter = showDeleted === "true" ? {} : { isDeleted: false };
 
     const announcements = await Announcements.find(filter)
-      .populate("created_by", "username")
+      .populate("created_by", "username profilePicture") // ✅ Ensure profilePicture is populated
       .select("title description created_by createdAt isDeleted");
 
     res.status(200).json({
@@ -48,7 +50,12 @@ const getAllAnnouncements = async (req, res) => {
         id: announcement._id,
         title: announcement.title,
         description: announcement.description,
-        created_by: announcement.created_by ? announcement.created_by.username : "Unknown User",
+        created_by: announcement.created_by
+          ? {
+              username: announcement.created_by.username,
+              profilePicture: announcement.created_by.profilePicture || null, // ✅ Include profile picture
+            }
+          : { username: "Unknown User", profilePicture: null },
         createdAt: announcement.createdAt,
         isDeleted: announcement.isDeleted,
       })),
@@ -59,19 +66,25 @@ const getAllAnnouncements = async (req, res) => {
   }
 };
 
+
 const getAnnouncementById = async (req, res) => {
   try {
     const { announcement_id } = req.params;
     const { showDeleted } = req.query;
 
-    const filter = showDeleted === "true" ? { _id: announcement_id } : { _id: announcement_id, isDeleted: false };
+    const filter =
+      showDeleted === "true"
+        ? { _id: announcement_id }
+        : { _id: announcement_id, isDeleted: false };
 
     const announcement = await Announcements.findOne(filter)
-      .populate("created_by", "username")
+      .populate("created_by", "username profilePicture") // ✅ Ensure profilePicture is populated
       .select("title description created_by createdAt updatedAt isDeleted");
 
     if (!announcement) {
-      return res.status(404).json({ message: "Announcement not found or deleted" });
+      return res
+        .status(404)
+        .json({ message: "Announcement not found or deleted" });
     }
 
     res.status(200).json({
@@ -80,7 +93,12 @@ const getAnnouncementById = async (req, res) => {
         id: announcement._id,
         title: announcement.title,
         description: announcement.description,
-        created_by: announcement.created_by.username,
+        created_by: announcement.created_by
+          ? {
+              username: announcement.created_by.username,
+              profilePicture: announcement.created_by.profilePicture || null, // ✅ Include profile picture
+            }
+          : { username: "Unknown User", profilePicture: null },
         createdAt: announcement.createdAt,
         updatedAt: announcement.updatedAt,
         isDeleted: announcement.isDeleted,
@@ -91,6 +109,7 @@ const getAnnouncementById = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 const updateAnnouncement = async (req, res) => {
   try {
@@ -108,20 +127,25 @@ const updateAnnouncement = async (req, res) => {
     }
 
     if (announcement.created_by.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: "Unauthorized to update this announcement" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to update this announcement" });
     }
 
     if (title) announcement.title = title;
     if (description) announcement.description = description;
 
     await announcement.save();
-    res.status(200).json({ message: "Announcement updated successfully", announcement: {
+    res.status(200).json({
+      message: "Announcement updated successfully",
+      announcement: {
         id: announcement._id,
         title: announcement.title,
         description: announcement.description,
-        created_by: announcement.created_by.username, 
+        created_by: announcement.created_by.username,
         updatedAt: announcement.updatedAt,
-      }, });
+      },
+    });
   } catch (error) {
     console.error("Error updating announcement:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -137,22 +161,27 @@ const deleteAnnouncement = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const announcement = await Announcements.findById(announcement_id);
-    if (!announcement) return res.status(404).json({ message: "Announcement not found" });
+    if (!announcement)
+      return res.status(404).json({ message: "Announcement not found" });
 
     if (announcement.created_by.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: "Unauthorized to delete this announcement" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to delete this announcement" });
     }
 
     if (announcement.isDeleted) {
-      return res.status(400).json({ message: "Announcement is already deleted" });
+      return res
+        .status(400)
+        .json({ message: "Announcement is already deleted" });
     }
 
     announcement.isDeleted = true;
     announcement.deletedAt = new Date();
     await announcement.save();
 
-    res.status(200).json({ 
-      message: "Announcement deleted successfully", 
+    res.status(200).json({
+      message: "Announcement deleted successfully",
       deletedAt: announcement.deletedAt,
     });
   } catch (error) {

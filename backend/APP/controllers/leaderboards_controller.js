@@ -9,7 +9,7 @@ const getUsersLeaderboard = async (req, res) => {
     const leaderboard = await Users.find({ has_badge: true, isDeleted: false })
       .sort({ points: -1 })
       .limit(10)
-      .select("first_name last_name username points has_badge");
+      .select("first_name last_name username points profilePicture has_badge");
 
     res.status(200).json({
       successful: true,

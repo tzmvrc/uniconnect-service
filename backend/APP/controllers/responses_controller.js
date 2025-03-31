@@ -80,7 +80,7 @@ const getResponsesByForum = async (req, res) => {
     }
 
     const responses = await Response.find({ forum_id, isArchived: false }) // <-- this line filters it
-      .populate("created_by", "username email first_name last_name")
+      .populate("created_by", "username email first_name last_name profilePicture")
       .sort({ createdAt: -1 });
 
     res.status(200).json(responses);

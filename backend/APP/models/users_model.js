@@ -1,3 +1,5 @@
+/** @format */
+
 const mongoose = require("mongoose");
 
 const Schema = mongoose.Schema;
@@ -45,9 +47,9 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    isDeleted: { 
-      type: Boolean, 
-      default: false 
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
     topics: {
       type: [mongoose.Schema.Types.ObjectId],
@@ -56,8 +58,16 @@ const UserSchema = new Schema(
     },
     savedForums: {
       type: [mongoose.Schema.Types.ObjectId],
-      ref: "forums", 
+      ref: "forums",
       default: [],
+    },
+    profilePicture: {
+      type: String,
+      default: null, // Store Cloudinary URL or null if no picture
+    },
+    profilePicturePublicId: {
+      type: String,
+      default: null, // Stores Cloudinary's publicId for deletion
     },
   },
   { timestamps: true }

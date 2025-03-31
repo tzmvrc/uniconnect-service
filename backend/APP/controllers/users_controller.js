@@ -7,6 +7,10 @@ const SchoolModel = require("../models/schools_model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { forgotPasswordOtp, sendOTPEmail } = require("./OTP_controller");
+const {
+  uploadProfileImage,
+  deleteImage,
+} = require("../../cloudinary/cloudinary");
 
 //Owner user
 const getUserInfo = async (req, res) => {
@@ -41,6 +45,7 @@ const getUserInfo = async (req, res) => {
         _id: isUser._id,
         createdOn: isUser.createdOn,
         hasBadge: isUser.has_badge,
+        profile_picture: isUser.profilePicture || null,
       },
       message: "User retrieved successfully",
     });
@@ -80,6 +85,7 @@ const getOtherUserInfo = async (req, res) => {
         LastName: user.last_name,
         Email: user.email,
         Username: user.username,
+        ProfilePicture: user.profilePicture || null,
         Points: user.points,
         Topics: user.topics,
         School: user.school_id ? user.school_id.school_name : null,
@@ -288,7 +294,6 @@ const login = async (req, res) => {
     });
   }
 };
-
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
@@ -675,6 +680,71 @@ const deleteOwnAccount = async (req, res) => {
   }
 };
 
+const uploadProfilePicture = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "No image file provided",
+    });
+  }
+
+  try {
+    const userId = req.user.userId;
+    const user = await UserModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 🔍 Log the existing profile picture ID
+    console.log(
+      `🗑️ Deleting old profile picture: ${user.profilePicturePublicId}`
+    );
+
+    // Delete old image if it exists
+    if (user.profilePicturePublicId) {
+      await deleteImage(user.profilePicturePublicId);
+      console.log(
+        `✅ deleteImage() was called for: ${user.profilePicturePublicId}`
+      );
+    } else {
+      console.log("⚠️ No old profile picture found, skipping deletion.");
+    }
+
+    // Correctly extract the new public ID
+    const imageUrl = req.file.path; // Cloudinary URL
+    let publicId = imageUrl // 🔹 Change `const` to `let`
+      .split("/")
+      .slice(-2)
+      .join("/")
+      .replace(/\.[^.]+$/, ""); // Extract without file extension
+
+    publicId = decodeURIComponent(publicId); // ✅ Now reassignment is allowed
+
+    // Save to the database
+    user.profilePicture = imageUrl;
+    user.profilePicturePublicId = publicId;
+    await user.save();
+
+    console.log(`✅ New profile picture publicId: ${publicId}`);
+
+    return res.json({
+      success: true,
+      profilePicture: imageUrl,
+      message: "Profile picture updated successfully",
+    });
+  } catch (error) {
+    console.error("❌ Profile upload error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Profile picture update failed",
+    });
+  }
+};
+
 module.exports = {
   getUserInfo,
   signup,
@@ -690,4 +760,5 @@ module.exports = {
   editUserProfile,
   getOtherUserInfo,
   deleteOwnAccount,
+  uploadProfilePicture,
 };
