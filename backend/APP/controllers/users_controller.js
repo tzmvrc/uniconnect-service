@@ -277,9 +277,10 @@ const login = async (req, res) => {
     // Set token as HttpOnly cookie (cannot be accessed by JS)
     res.cookie("token", token, {
       secure: true,
+      httpOnly: false,
+      sameSite: "none",
       domain: "uniconnectph.vercel.app",
       maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
-      sameSite: "Strict", // Mitigate CSRF attacks  
       path: "/", // Ensure the cookie is available site-wide
     });
 
