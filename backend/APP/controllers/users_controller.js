@@ -272,7 +272,7 @@ const login = async (req, res) => {
       sameSite: "Strict",  // Helps with CSRF protection
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000),  // 1 day expiration
     });
-    res.json({ message: "Login successful." });
+    res.json({successful: true, message: "Login successful." });
     
 
 
