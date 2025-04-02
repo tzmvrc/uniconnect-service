@@ -274,19 +274,11 @@ const login = async (req, res) => {
 
 
 
-    // Set token as HttpOnly cookie (cannot be accessed by JS)
-    res.cookie("token", token, {
-      secure: true,
-      httpOnly: false,
-      sameSite: "lax",
-      maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
-      path: "/", // Ensure the cookie is available site-wide
-    });
-
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
       refreshToken,
+      token,
     });
   } catch (err) {
     console.error("Login error:", err);
