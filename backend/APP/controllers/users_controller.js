@@ -296,11 +296,17 @@ const logout = (req, res) => {
 };
 
 const verifyToken = (req, res) => {
-  const token = req.cookies.token; // Read from cookies
-  if (!token) return res.json({ valid: false });
+  const token = req.cookies.token;
+  if (!token) return res.json({ valid: false }); // No token = invalid
 
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    res.json({ valid: !err, user: err ? null : user });
+    if (err) {
+      // Token expired or tampered with
+      res.clearCookie("token"); // Explicitly clear invalid token
+      return res.json({ valid: false });
+    }
+    // Token is valid
+    res.json({ valid: true, user });
   });
 };
 
