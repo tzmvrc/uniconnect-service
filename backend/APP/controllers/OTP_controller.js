@@ -5,6 +5,7 @@ const OTP = require("../models/otp_model");
 const School = require("../models/schools_model");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/users_model");
 
@@ -247,7 +248,7 @@ const verifyOTP = async (req, res) => {
     if (!otpRecord) {
       return res.status(400).json({
         error: true,
-        message: "OTP not found or expired or already verified",
+        message: "OTP not found, expired, or already verified",
       });
     }
 
@@ -265,14 +266,29 @@ const verifyOTP = async (req, res) => {
         .json({ error: true, message: "Incorrect Code, Try Again" });
     }
 
-    // Mark user as verified
+    // ✅ Mark user as verified
     await User.updateOne({ email }, { isVerified: true });
 
-    // Delete OTP record after successful verification
+    // ✅ Delete OTP record after successful verification
     await OTP.deleteOne({ email });
 
+    // ✅ Generate JWT Token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "7h" }
+    );
+
+    // ✅ Set Cookie
+    res.cookie("token", token, {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 60 * 60 * 1000, // 7 hours
+      sameSite: "Strict",
+      path: "/",
+    });
+
     return res.json({
-      success: true,
+      error: false,
       message: "OTP verified, account is now active",
     });
   } catch (error) {
@@ -282,6 +298,7 @@ const verifyOTP = async (req, res) => {
       .json({ error: true, message: "Server error during OTP verification" });
   }
 };
+
 
 const resendOTP = async (req, res) => {
   const { email } = req.body; // Extract userId from params

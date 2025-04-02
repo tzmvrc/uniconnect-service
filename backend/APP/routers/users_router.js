@@ -9,6 +9,7 @@ const { upload, handleUploadErrors } = require("../../cloudinary/multerConfig");
 //PARAMETER ARGUMENTS SHOULD BE THE ENDPOINT, AND THE CONTROLLER
 router.post("/signup", userController.signup);
 router.post("/login", userController.login);
+router.post("/logout", userController.logout);
 router.get("/get-user-info", authMiddleware, userController.getUserInfo);
 router.post("/forgot-password", userController.forgotPassword);
 router.post("/reset-password", userController.resetPassword);

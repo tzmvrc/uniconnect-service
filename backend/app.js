@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 // IMPORT DATABASE INSTANCE
 const db = require("./APP/models/con_db");
@@ -39,6 +40,8 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.use(cookieParser()); 
 
 // Log incoming requests in a development-friendly format
 app.use(morgan("dev"));

@@ -135,7 +135,7 @@ const signup = async (req, res) => {
     // Check if the school exists
     const school = await SchoolModel.findOne({ school_name });
 
-    // Check if email or username already exists, excluding soft-deleted users
+    // Check if email or username already exists
     const existingUser = await UserModel.findOne({
       $or: [{ email }, { username }],
       isDeleted: { $ne: true }, // Exclude soft-deleted users
@@ -162,24 +162,16 @@ const signup = async (req, res) => {
       username,
       password: hashedPassword,
       email,
-      isDeleted: false, // Ensure new users start as active
+      isVerified: false, // ✅ Ensure field exists
+      isDeleted: false,
     });
 
     await newUser.save();
     await sendOTPEmail({ email });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: newUser._id, email },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "7h" }
-    );
-
     return res.status(201).json({
       successful: true,
-      newUser,
-      message: "Account created successfully.",
-      token,
+      message: "Account created successfully. Please verify your email.",
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -189,6 +181,7 @@ const signup = async (req, res) => {
     });
   }
 };
+
 
 const checkIfVerified = async (req, res) => {
   try {
@@ -251,7 +244,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Find only users where isDeleted is explicitly false
     const user = await UserModel.findOne({ email, isDeleted: false });
 
     if (!user) {
@@ -280,10 +272,17 @@ const login = async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
+    // Set token as HttpOnly cookie (cannot be accessed by JS)
+    res.cookie("token", token, {
+      secure: process.env.NODE_ENV === "production", // Set secure flag in production
+      maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
+      sameSite: "Strict", // Mitigate CSRF attacks  
+      path: "/", // Ensure the cookie is available site-wide
+    });
+
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
-      token,
       refreshToken,
     });
   } catch (err) {
@@ -294,6 +293,12 @@ const login = async (req, res) => {
     });
   }
 };
+
+const logout = (req, res) => {
+  res.clearCookie("token"); // Clear the token cookie on the server
+  res.status(200).send({ message: "Logged out successfully." });
+};
+
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
@@ -749,6 +754,7 @@ module.exports = {
   getUserInfo,
   signup,
   login,
+  logout,
   forgotPassword,
   resetPassword,
   checkIfVerified,

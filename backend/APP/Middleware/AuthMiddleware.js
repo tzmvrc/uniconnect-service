@@ -3,16 +3,33 @@
 const jwt = require("jsonwebtoken");
 
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  // First, check for the token in cookies
+  const token = req.cookies?.token; // Check cookies for the token
 
-  if (!token)
-    return res.sendStatus(401).json({ error: true, message: "Unauthorized" });
+  if (!token) {
+    // If token is not found, check the Authorization header
+    const authHeader = req.headers["authorization"];
+    const tokenFromHeader = authHeader && authHeader.split(" ")[1];
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) return res.sendStatus(401).json({ error: true, message: "Invalid" });
-    req.user = user;
-    next();
+    if (!tokenFromHeader) {
+      return res.status(401).json({ error: true, message: "Unauthorized" });
+    }
+
+    // If a token was found in the header, use it
+    req.token = tokenFromHeader;
+  } else {
+    req.token = token; // Token found in cookies
+  }
+
+  // Verify token
+  jwt.verify(req.token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ error: true, message: "Invalid or expired token" });
+    }
+    req.user = user; // Attach user data to the request object
+    next(); // Proceed to the next middleware/route handler
   });
 }
 
