@@ -267,11 +267,18 @@ const login = async (req, res) => {
       { expiresIn: "7h" }
     );
 
+    res.cookie("token", token, {
+      secure: process.env.NODE_ENV === "production",  // Ensure secure cookies in production
+      sameSite: "Strict",  // Helps with CSRF protection
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),  // 1 day expiration
+    });
+    res.json({ message: "Login successful." });
+    
+
 
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
-      token,
     });
   } catch (err) {
     console.error("Login error:", err);
