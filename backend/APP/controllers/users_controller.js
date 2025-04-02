@@ -278,8 +278,7 @@ const login = async (req, res) => {
     res.cookie("token", token, {
       secure: true,
       httpOnly: false,
-      sameSite: "none",
-      domain: "uniconnectph.vercel.app",
+      sameSite: "lax",
       maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
       path: "/", // Ensure the cookie is available site-wide
     });
