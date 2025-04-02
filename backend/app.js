@@ -28,8 +28,7 @@ const app = express();
 db.connectDB();
 
 const allowedOrigins = [
-  process.env.CLIENT_URL || "http://localhost:3000", // Production or localhost
-  process.env.LOCALHOST_URL || "http://localhost:3000", // Additional local env support if needed
+  process.env.CLIENT_URL
 ];
 
 app.use(
