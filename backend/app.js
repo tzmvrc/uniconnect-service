@@ -21,11 +21,10 @@ const announcementRouter = require("./APP/routers/announcement_router");
 const notificationRouter = require("./APP/routers/notification_router");
 const leaderboardsRouter = require("./APP/routers/leaderboards_router");
 
-// INITIALIZE EXPRESS APP
 const app = express();
-
-// CONNECT TO DATABASE
 db.connectDB();
+app.use(cookieParser()); 
+app.use(morgan("dev"));
 
 const allowedOrigins = [
   process.env.CLIENT_URL
@@ -40,10 +39,7 @@ app.use(
   })
 );
 
-app.use(cookieParser()); 
 
-// Log incoming requests in a development-friendly format
-app.use(morgan("dev"));
 
 // Body parsing middleware
 app.use(express.json({ limit: "50mb" })); // Parses JSON payloads

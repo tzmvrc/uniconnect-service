@@ -3,10 +3,7 @@
 const jwt = require("jsonwebtoken");
 
 function authMiddleware(req, res, next) {
-  // First, check for the token in cookies
-  console.log("Request Headers:", req.headers); // Log all headers
-  console.log("Request Cookies:", req.cookies); // Log cookies
-  
+  // First, check for the token in cookie
   const token = req.cookies?.token; // Check cookies for the token
   console.log('Token from cookie:', req.cookies?.token);
 
