@@ -267,17 +267,10 @@ const login = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-    const refreshToken = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.REFRESH_TOKEN_SECRET
-    );
-
-
 
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
-      refreshToken,
       token,
     });
   } catch (err) {
