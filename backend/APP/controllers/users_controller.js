@@ -271,6 +271,7 @@ const login = async (req, res) => {
       secure: process.env.NODE_ENV === "production",  // Ensure secure cookies in production
       sameSite: "Strict",  // Helps with CSRF protection
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000),  // 1 day expiration
+      path: "/",
     });
     res.json({successful: true, message: "Login successful." });
     
