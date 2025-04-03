@@ -33,7 +33,7 @@ router.put(
   userController.uploadProfilePicture
 );
 
-router.get("/validate-user", authMiddleware, userController.verifyToken);
+router.get("/check-auth", authMiddleware, userController.checkAuth);
 
 
 //http://localhost:8000/users/1
