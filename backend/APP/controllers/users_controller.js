@@ -238,26 +238,26 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).send({
         successful: false,
-        message: "Email and password are required" 
+        message: "Email and password are required",
       });
     }
 
     const user = await UserModel.findOne({ email, isDeleted: false });
 
     if (!user) {
-      return res.status(404).json({ 
-        successful: false, 
-        message: "User not found or deleted." 
+      return res.status(404).send({
+        successful: false,
+        message: "User not found or has been deleted.",
       });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        successful: false, 
-        message: "Incorrect password." 
+      return res.status(401).send({
+        successful: false,
+        message: "Incorrect password.",
       });
     }
 
@@ -267,43 +267,36 @@ const login = async (req, res) => {
       { expiresIn: "7h" }
     );
 
+    const refreshToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    // Set token as HttpOnly cookie (cannot be accessed by JS)
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
+      secure: process.env.NODE_ENV === "production", // Set secure flag in production
+      maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
+      sameSite: "Strict", // Mitigate CSRF attacks  
+      path: "/", // Ensure the cookie is available site-wide
     });
 
-    res.status(200).json({ 
+    return res.status(200).send({
       successful: true,
-      message: "Login successful." 
+      message: "Login successful.",
+      refreshToken,
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ 
-      successful: false, 
-      message: "Server error during login." 
+    return res.status(500).send({
+      successful: false,
+      message: "An error occurred. Please try again later.",
     });
   }
 };
 
-// Logout Controller
 const logout = (req, res) => {
-  res.clearCookie("token");
-  res.status(200).json({ message: "Logged out successfully." });
-};
-
-// Check Auth Status Controller
-const checkAuth = (req, res) => {
-  // authMiddleware already verified the token
-  res.status(200).json({
-    authenticated: true,
-    user: {
-      userId: req.user.userId,
-      email: req.user.email,
-    },
-  });
+  res.clearCookie("token"); // Clear the token cookie on the server
+  res.status(200).send({ message: "Logged out successfully." });
 };
 
 
@@ -762,7 +755,6 @@ module.exports = {
   signup,
   login,
   logout,
-  checkAuth,
   forgotPassword,
   resetPassword,
   checkIfVerified,
