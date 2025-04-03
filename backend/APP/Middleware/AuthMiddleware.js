@@ -1,65 +1,38 @@
 /** @format */
+
 const jwt = require("jsonwebtoken");
-const UserModel = require("../models/users_model"); // Make sure path is correct
 
-async function authMiddleware(req, res, next) {
-  try {
-    // Token extraction (unchanged)
-    const token = req.cookies?.token;
-    console.log('Token from cookie:', token);
+function authMiddleware(req, res, next) {
+  // First, check for the token in cookie
+  const token = req.cookies?.token; // Check cookies for the token
+  console.log('Token from cookie:', req.cookies?.token);
 
-    if (!token) {
-      const authHeader = req.headers["authorization"];
-      const tokenFromHeader = authHeader && authHeader.split(" ")[1];
-      if (!tokenFromHeader) {
-        return res.status(401).json({ error: true, message: "Unauthorized" });
-      }
-      req.token = tokenFromHeader;
-    } else {
-      req.token = token;
+
+  if (!token) {
+    // If token is not found, check the Authorization header
+    const authHeader = req.headers["authorization"];
+    const tokenFromHeader = authHeader && authHeader.split(" ")[1];
+
+    if (!tokenFromHeader) {
+      return res.status(401).json({ error: true, message: "Unauthorized" });
     }
 
-    // Token verification + user check
-    jwt.verify(req.token, process.env.ACCESS_TOKEN_SECRET, async (err, decoded) => {
-      if (err) {
-        return res.status(401).json({ 
-          error: true, 
-          message: "Invalid or expired token" 
-        });
-      }
-
-      // NEW: Verify user exists in database
-      const user = await UserModel.findOne({
-        _id: decoded.userId,
-        isDeleted: false
-      });
-
-      if (!user) {
-        console.log(`User ${decoded.userId} not found in database`);
-        return res.status(404).json({
-          error: true,
-          message: "User account not found or deleted"
-        });
-      }
-
-      // Attach full user document to request
-      req.user = {
-        userId: user._id,
-        email: user.email,
-        // Add other needed user fields
-        ...user._doc
-      };
-
-      next();
-    });
-
-  } catch (err) {
-    console.error("Auth middleware error:", err);
-    return res.status(500).json({
-      error: true,
-      message: "Authentication server error"
-    });
+    // If a token was found in the header, use it
+    req.token = tokenFromHeader;
+  } else {
+    req.token = token; // Token found in cookies
   }
+
+  // Verify token
+  jwt.verify(req.token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ error: true, message: "Invalid or expired token" });
+    }
+    req.user = user; // Attach user data to the request object
+    next(); // Proceed to the next middleware/route handler
+  });
 }
 
 module.exports = authMiddleware;

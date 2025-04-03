@@ -32,11 +32,17 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins, // Allow multiple frontend URLs
+    origin: "https://uniconnectph.vercel.app", // Allow multiple frontend URLs
     credentials: true, // Allow cookies/auth headers
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "Set-Cookie"],
-    exposedHeaders: ["Set-Cookie", "Cookie"]
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Cookie",
+      "Set-Cookie"
+    ],
+    exposedHeaders: ["Set-Cookie", "Cookie", "Authorization"]
   })
 );
 
