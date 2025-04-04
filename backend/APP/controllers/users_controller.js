@@ -296,7 +296,13 @@ const login = async (req, res) => {
 };
 
 const logout = (req, res) => {
-  res.clearCookie("token"); // Clear the token cookie on the server
+  res.clearCookie("token", {
+    httpOnly: true, 
+    secure: process.env.NODE_ENV === "production", 
+    sameSite: "Lax", 
+    path: "/", // Ensures the correct cookie is cleared
+  });
+
   res.status(200).send({ message: "Logged out successfully." });
 };
 
