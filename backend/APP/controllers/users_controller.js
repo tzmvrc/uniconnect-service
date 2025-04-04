@@ -297,13 +297,13 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   res.clearCookie("token", {
-    httpOnly: true, 
-    secure: process.env.NODE_ENV === "production", 
-    sameSite: "Lax", 
-    path: "/", // Ensures the correct cookie is cleared
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "None", // ✅ Must match the login setting
+    path: "/", // ✅ Important! This must be the same as when setting the cookie
   });
 
-  res.status(200).send({ message: "Logged out successfully." });
+  return res.status(200).send({ message: "Logged out successfully." });
 };
 
 
