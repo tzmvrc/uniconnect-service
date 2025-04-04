@@ -277,7 +277,7 @@ const login = async (req, res) => {
       httpOnly: true, 
       secure: process.env.NODE_ENV === "production", // Set secure flag in production
       maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
-      sameSite: "Lax", // Mitigate CSRF attacks  
+      sameSite: "None", // Mitigate CSRF attacks  
       path: "/", // Ensure the cookie is available site-wide
     });
 
