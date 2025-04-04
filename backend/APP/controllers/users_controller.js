@@ -274,9 +274,10 @@ const login = async (req, res) => {
 
     // Set token as HttpOnly cookie (cannot be accessed by JS)
     res.cookie("token", token, {
+      httpOnly: true, 
       secure: process.env.NODE_ENV === "production", // Set secure flag in production
       maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
-      sameSite: "None", // Mitigate CSRF attacks  
+      sameSite: "Lax", // Mitigate CSRF attacks  
       path: "/", // Ensure the cookie is available site-wide
     });
 
