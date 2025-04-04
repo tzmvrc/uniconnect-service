@@ -9,17 +9,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/users_model");
 
-// Nodemailer Transporter Configuration
-// let transporter = nodemailer.createTransport({
-//   host: process.env.SMTP_HOST,
-//   port: process.env.SMTP_PORT,
-//   auth: {
-//     user: process.env.SMTP_USER,
-//     pass: process.env.SMTP_PASS,
-//   },
-// });
-
-// 2nd option thru gmail
 let transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -279,11 +268,12 @@ const verifyOTP = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-    // ✅ Set Cookie
+    // Set token as HttpOnly cookie (cannot be accessed by JS)
     res.cookie("token", token, {
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 60 * 60 * 1000, // 7 hours
-      sameSite: "Strict",
+      maxAge: 7 * 60 * 60 * 1000,
+      sameSite: "None",
       path: "/",
     });
 

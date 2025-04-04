@@ -274,11 +274,11 @@ const login = async (req, res) => {
 
     // Set token as HttpOnly cookie (cannot be accessed by JS)
     res.cookie("token", token, {
-      httpOnly: true, 
-      secure: process.env.NODE_ENV === "production", // Set secure flag in production
-      maxAge: 7 * 60 * 60 * 1000, // Token expiry time (7 hours)
-      sameSite: "None", // Mitigate CSRF attacks  
-      path: "/", // Ensure the cookie is available site-wide
+     httpOnly: true,
+     secure: process.env.NODE_ENV === "production",
+     maxAge: 7 * 60 * 60 * 1000,
+     sameSite: "None",
+     path: "/",
     });
 
     return res.status(200).send({
@@ -299,18 +299,23 @@ const logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "None", // ✅ Must match the login setting
-    path: "/", // ✅ Important! This must be the same as when setting the cookie
+    sameSite: "None",
+    path: "/",
   });
 
-  return res.status(200).send({ message: "Logged out successfully." });
+  return res.status(200).send({
+    successful: true,
+    message: "Logout successful.",
+  });
+ 
 };
+
 
 const checkAuth = (req, res) => {
   const token = req.cookies.token;
 
   if (!token) {
-    return res.status(401).json({ loggedIn: false, message: "Not authenticated" });
+    return res.status(401).json({ loggedIn: false, message: "Not Authenticated" });
   }
 
   try {
@@ -319,7 +324,7 @@ const checkAuth = (req, res) => {
   } catch (error) {
     return res.status(401).json({ loggedIn: false, message: "Invalid token" });
   }
-};
+}
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
