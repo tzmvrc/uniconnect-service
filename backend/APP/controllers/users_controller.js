@@ -306,6 +306,20 @@ const logout = (req, res) => {
   return res.status(200).send({ message: "Logged out successfully." });
 };
 
+const checkAuth = (req, res) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).json({ loggedIn: false, message: "Not authenticated" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    return res.status(200).json({ loggedIn: true, user: decoded });
+  } catch (error) {
+    return res.status(401).json({ loggedIn: false, message: "Invalid token" });
+  }
+};
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
@@ -762,6 +776,7 @@ module.exports = {
   signup,
   login,
   logout,
+  checkAuth,
   forgotPassword,
   resetPassword,
   checkIfVerified,
