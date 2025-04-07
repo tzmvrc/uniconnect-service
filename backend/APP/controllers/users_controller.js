@@ -267,24 +267,11 @@ const login = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-    const refreshToken = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.REFRESH_TOKEN_SECRET
-    );
-
-    // Set token as HttpOnly cookie (cannot be accessed by JS)
-    res.cookie("token", token, {
-     httpOnly: true,
-     secure: process.env.NODE_ENV === "production",
-     maxAge: 7 * 60 * 60 * 1000,
-     sameSite: "None",
-     path: "/",
-    });
 
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
-      refreshToken,
+      token,
     });
   } catch (err) {
     console.error("Login error:", err);

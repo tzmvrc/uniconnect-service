@@ -268,18 +268,11 @@ const verifyOTP = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-    // Set token as HttpOnly cookie (cannot be accessed by JS)
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 60 * 60 * 1000,
-      sameSite: "None",
-      path: "/",
-    });
 
     return res.json({
       error: false,
       message: "OTP verified, account is now active",
+      token,
     });
   } catch (error) {
     console.error("OTP verification error:", error);
