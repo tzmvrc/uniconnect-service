@@ -683,6 +683,7 @@ const deleteOwnAccount = async (req, res) => {
     user.first_name = "USER";
     user.last_name = "DELETED";
     user.username = `Deleted_User`;
+    user.profilePicture = null;
     await user.save();
 
     return res.status(200).json({
