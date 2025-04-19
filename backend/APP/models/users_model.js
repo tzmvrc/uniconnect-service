@@ -35,10 +35,6 @@ const UserSchema = new Schema(
       type: Number,
       default: 0,
     },
-    status: {
-      type: Boolean,
-      default: true,
-    },
     has_badge: {
       type: Boolean,
       default: false,

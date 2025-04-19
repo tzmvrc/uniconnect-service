@@ -201,16 +201,33 @@ const searchController = async (req, res) => {
 
 const getAllForums = async (req, res) => {
   try {
-    // Retrieve only non-archived forums
-    const forums = await Forum.find({ isArchived: false })
-      .populate("created_by", "username first_name last_name profilePicture")
+    // Get all non-archived forums
+    let forums = await Forum.find({ isArchived: false })
+      .populate("created_by", "username first_name last_name profilePicture isDeleted")
       .populate("topic_id", "name display");
 
     if (forums.length === 0) {
       return res.status(404).json({ message: "No forums found" });
     }
 
-    res.status(200).json({ success: true, forums });
+    const updatePromises = forums.map(async (forum) => {
+      if (forum.created_by?.isDeleted && forum.status !== "closed") {
+        forum.status = "closed";
+        await forum.save();
+      }
+    });
+    await Promise.all(updatePromises);
+
+    const forumsInfo = forums.map(forum => ({
+      title: forum.title,
+      description: forum.description,
+      createdBy: forum.created_by ? forum.created_by.username : 'Unknown',
+      topic: forum.topic_id.name,
+      status: forum.status,
+      createdAt: forum.createdAt,
+    }));
+
+    res.status(200).json({ success: true, forums: forumsInfo });
   } catch (error) {
     console.error("Error fetching all forums:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
@@ -221,13 +238,18 @@ const getAllForums = async (req, res) => {
 const viewForum = async (req, res) => {
   try {
     const forum = await Forum.findById(req.params.forum_id)
-      .populate("created_by", "username first_name last_name profilePicture") // Populate author's username
+      .populate("created_by", "username first_name last_name profilePicture isDeleted") // Populate author's username
       .populate("topic_id", "name"); // Populate topic name
 
     if (!forum) {
       return res
         .status(404)
         .json({ success: false, message: "Forum not found" });
+    }
+
+    if (forum.created_by?.isDeleted && forum.status !== "closed") {
+      forum.status = "closed";
+      await forum.save();
     }
 
     res.json({ success: true, forum });
@@ -458,9 +480,22 @@ const getForumsByOtherUser = async (req, res) => {
       return res.status(400).json({ message: "Username is required" });
     }
 
-    const user = await User.findOne({ username }).select("_id");
+    const user = await User.findOne({ username }).select("_id isDeleted");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // If user is soft-deleted, close all their public, non-archived, non-closed forums
+    if (user.isDeleted) {
+      await Forum.updateMany(
+        {
+          created_by: user._id,
+          public: true,
+          isArchived: false,
+          status: { $ne: "closed" },
+        },
+        { $set: { status: "closed" } }
+      );
     }
 
     const forums = await Forum.find({
@@ -468,7 +503,7 @@ const getForumsByOtherUser = async (req, res) => {
       public: true,
       isArchived: false,
     })
-      .select("title description createdAt")
+      .select("title description createdAt status")
       .sort({ createdAt: -1 });
 
     res.status(200).json({

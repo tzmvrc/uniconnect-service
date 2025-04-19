@@ -679,10 +679,10 @@ const deleteOwnAccount = async (req, res) => {
 
     user.isDeleted = true;
 
-    // Optionally remove sensitive data
-    //user.email = `deleted_${Date.now()}@example.com`; // Replace email with a dummy value
-    user.username = `deleted_user_${Date.now()}`; // Replace username
-    // user.password = undefined; // Clear the password
+    user.email = `deleted@Uniconnect.com`;
+    user.first_name = "USER";
+    user.last_name = "DELETED";
+    user.username = `Deleted_User`;
     await user.save();
 
     return res.status(200).json({
