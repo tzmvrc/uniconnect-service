@@ -218,16 +218,7 @@ const getAllForums = async (req, res) => {
     });
     await Promise.all(updatePromises);
 
-    const forumsInfo = forums.map(forum => ({
-      title: forum.title,
-      description: forum.description,
-      createdBy: forum.created_by ? forum.created_by.username : 'Unknown',
-      topic: forum.topic_id.name,
-      status: forum.status,
-      createdAt: forum.createdAt,
-    }));
-
-    res.status(200).json({ success: true, forums: forumsInfo });
+    res.status(200).json({ success: true, forums });
   } catch (error) {
     console.error("Error fetching all forums:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
