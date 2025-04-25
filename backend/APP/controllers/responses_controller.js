@@ -107,17 +107,31 @@ const updateResponse = async (req, res) => {
     });
 
     if (!response) {
-      return res
-        .status(404)
-        .json({ message: "Response not found or unauthorized" });
+      return res.status(404).json({
+        message: "Response not found or unauthorized",
+      });
     }
 
-    response.comment = comment || response.comment;
-    await response.save();
+    // Only update if comment is different
+    if (comment && comment !== response.comment) {
+      response.comment = comment;
 
-    res
-      .status(200)
-      .json({ message: "Response updated successfully", response });
+      // Save the response, which automatically updates the updatedAt field
+      await response.save();
+
+      return res.status(200).json({
+        message: "Response updated successfully",
+        updated: true,
+        response,
+      });
+    }
+
+    // Return a message when no changes are made
+    return res.status(200).json({
+      message: "No changes were made",
+      updated: false,
+      response,
+    });
   } catch (error) {
     console.error("Error in updateResponse:", error);
     res.status(500).json({ message: "Server error", error: error.message });
