@@ -53,6 +53,10 @@ app.use(
   express.urlencoded({ extended: true, limit: "50mb", parameterLimit: 50000 })
 ); // Parses URL-encoded payloads
 
+// HEALTH CHECK ROUTE (to keep server awake)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ message: 'Server is healthy', time: new Date().toISOString() });
+});
 
 // ROUTES
 app.use("/users", userRouter);
