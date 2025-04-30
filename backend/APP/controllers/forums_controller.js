@@ -217,7 +217,6 @@ const getAllForums = async (req, res) => {
       }
     });
     await Promise.all(updatePromises);
-
     res.status(200).json({ success: true, forums });
   } catch (error) {
     console.error("Error fetching all forums:", error);
@@ -225,12 +224,14 @@ const getAllForums = async (req, res) => {
   }
 };
 
-
 const viewForum = async (req, res) => {
   try {
     const forum = await Forum.findById(req.params.forum_id)
-      .populate("created_by", "username first_name last_name profilePicture isDeleted") // Populate author's username
-      .populate("topic_id", "name"); // Populate topic name
+      .populate(
+        "created_by",
+        "username first_name last_name profilePicture isDeleted _id"
+      )
+      .populate("topic_id", "name");
 
     if (!forum) {
       return res
@@ -238,6 +239,37 @@ const viewForum = async (req, res) => {
         .json({ success: false, message: "Forum not found" });
     }
 
+    // Block if forum is archived (i.e. soft deleted)
+    if (forum.isArchived) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Forum has been deleted",
+        });
+    }
+
+    // Fetch user by userId from the JWT (req.user.userId)
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // If forum is private (public: false), allow only the creator
+    if (!forum.public) {
+      // Check if the logged-in user is the creator of the forum
+      if (forum.created_by.username !== user.username) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Forbidden: Private forum" });
+      }
+    }
+
+    // Auto-close if user is deleted
     if (forum.created_by?.isDeleted && forum.status !== "closed") {
       forum.status = "closed";
       await forum.save();
@@ -249,6 +281,8 @@ const viewForum = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
 
 const likeForum = async (req, res) => {
   try {
@@ -471,6 +505,7 @@ const getForumsByOtherUser = async (req, res) => {
       return res.status(400).json({ message: "Username is required" });
     }
 
+    // Find the user
     const user = await User.findOne({ username }).select("_id isDeleted");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
