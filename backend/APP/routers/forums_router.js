@@ -13,7 +13,7 @@ router.put("/close/:forum_id",authMiddleware, forumsController.closeForum);
 router.put("/open/:forum_id", authMiddleware, forumsController.openForum);
 router.get("/search", forumsController.searchController);
 router.get("/all",authMiddleware, forumsController.getAllForums);
-router.get("/:forum_id", forumsController.viewForum);
+router.get("/:forum_id", authMiddleware, forumsController.viewForum);
 router.post("/:forum_id/like", authMiddleware, forumsController.likeForum);
 router.post("/:forum_id/dislike", authMiddleware, forumsController.dislikeForum);
 router.post("/:forum_id/save", authMiddleware, forumsController.saveForum);
