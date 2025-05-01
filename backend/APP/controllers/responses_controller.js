@@ -138,6 +138,9 @@ const updateResponse = async (req, res) => {
   }
 };
 
+
+
+
 // Delete a response (only the owner can delete their response)
 const deleteResponse = async (req, res) => {
   try {
@@ -233,7 +236,8 @@ const likeResponse = async (req, res) => {
     }
 
     // ✅ Save updated response
-    await response.save();
+    await response.save({ timestamps: false });
+
 
     let updatedPoints = null;
 
@@ -314,7 +318,8 @@ const dislikeResponse = async (req, res) => {
     }
 
     // ✅ Save the updated response
-    await response.save();
+    await response.save({ timestamps: false });
+
 
     // ✅ Calculate and save updated user points
     const points = await calculateUserPoints(response.created_by);
