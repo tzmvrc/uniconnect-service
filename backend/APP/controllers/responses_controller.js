@@ -139,8 +139,6 @@ const updateResponse = async (req, res) => {
 };
 
 
-
-
 // Delete a response (only the owner can delete their response)
 const deleteResponse = async (req, res) => {
   try {
@@ -409,25 +407,28 @@ const calculateUserPoints = async (userId) => {
     let totalDislikes = 0;
 
     responses.forEach((response) => {
-      totalLikes += response.likes;
-      totalDislikes += response.dislikes;
+      const filteredLikes = response.liked_by.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      const filteredDislikes = response.disliked_by.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+
+      totalLikes += filteredLikes.length;
+      totalDislikes += filteredDislikes.length;
     });
 
-   const points = Math.max(
-     0,
-     Math.round(
-       totalLikes >= totalDislikes
-         ? (totalLikes - totalDislikes) * 0.5 + responses.length * 2 // ✅ Normal calculation
-         : (totalLikes - totalDislikes) * 0.8 + responses.length * 1.5 // ❌ Harsher penalty if dislikes are higher
-     )
-   );
+    const points = Math.max(
+      0,
+      Math.round(
+        totalLikes >= totalDislikes
+          ? (totalLikes - totalDislikes) * 0.5 + responses.length * 2
+          : (totalLikes - totalDislikes) * 0.8 + responses.length * 1.5
+      )
+    );
 
-
-
-    // ✅ Check if user qualifies for a badge
     const hasBadge = points >= 100;
 
-    // ✅ Update user document
     const user = await User.findById(userId);
     if (user) {
       user.points = points;
@@ -441,6 +442,7 @@ const calculateUserPoints = async (userId) => {
     throw error;
   }
 };
+
 
 module.exports = {
   createResponse,
