@@ -368,12 +368,15 @@ const getResponsesByOwner = async (req, res) => {
     })
       .populate({
         path: "forum_id",
-        select: "title description created_by createdAt isArchived",
-        match: { isArchived: false }, // ← only active forums
+        select: "title description created_by createdAt isArchived public", // Added public to select
+        match: {
+          isArchived: false,
+          public: true, // ← only public forums
+        },
       })
       .select("forum_id");
 
-    // Step 2: Filter out responses where forum_id was not populated (i.e., it was archived)
+    // Step 2: Filter out responses where forum_id was not populated (i.e., it was archived or private)
     const filteredForums = responses
       .map((r) => r.forum_id)
       .filter((forum) => forum !== null);
