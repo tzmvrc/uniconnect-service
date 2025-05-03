@@ -182,7 +182,6 @@ const signup = async (req, res) => {
   }
 };
 
-
 const checkIfVerified = async (req, res) => {
   try {
     const { email } = req.params;
@@ -267,7 +266,6 @@ const login = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
@@ -294,15 +292,15 @@ const logout = (req, res) => {
     successful: true,
     message: "Logout successful.",
   });
- 
 };
-
 
 const checkAuth = (req, res) => {
   const token = req.cookies.token;
 
   if (!token) {
-    return res.status(401).json({ loggedIn: false, message: "Not Authenticated" });
+    return res
+      .status(401)
+      .json({ loggedIn: false, message: "Not Authenticated" });
   }
 
   try {
@@ -311,7 +309,7 @@ const checkAuth = (req, res) => {
   } catch (error) {
     return res.status(401).json({ loggedIn: false, message: "Invalid token" });
   }
-}
+};
 
 // Forgot Password function
 const forgotPassword = async (req, res) => {
