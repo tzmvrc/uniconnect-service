@@ -268,7 +268,6 @@ const verifyOTP = async (req, res) => {
       { expiresIn: "7h" }
     );
 
-
     return res.json({
       error: false,
       message: "OTP verified, account is now active",
@@ -281,7 +280,6 @@ const verifyOTP = async (req, res) => {
       .json({ error: true, message: "Server error during OTP verification" });
   }
 };
-
 
 const resendOTP = async (req, res) => {
   const { email } = req.body; // Extract userId from params
