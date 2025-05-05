@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/users_model");
+const TokenModel = require("../models/token_model");
 
 let transporter = nodemailer.createTransport({
   service: "gmail",
@@ -217,7 +218,7 @@ const forgotPasswordOtp = async ({ email }) => {
 
 // Verify OTP
 const verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
+  const { email, otp, purpose } = req.body; // Added purpose
 
   if (!otp || !email) {
     return res
@@ -261,6 +262,14 @@ const verifyOTP = async (req, res) => {
     // ✅ Delete OTP record after successful verification
     await OTP.deleteOne({ email });
 
+    // ✅ Skip token generation if purpose is "forgot"
+    if (purpose === "forgot") {
+      return res.json({
+        error: false,
+        message: "OTP verified for password reset",
+      });
+    }
+
     // ✅ Generate JWT Token
     const token = jwt.sign(
       { userId: user._id, email: user.email },
@@ -268,10 +277,24 @@ const verifyOTP = async (req, res) => {
       { expiresIn: "7h" }
     );
 
+    // Save or update token in separate token DB
+    await TokenModel.findOneAndUpdate(
+      { userId: user._id },
+      { token },
+      { upsert: true, new: true }
+    );
+
+    // Set token as HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 7 * 60 * 60 * 1000, // 7 hours
+    });
+
     return res.json({
       error: false,
       message: "OTP verified, account is now active",
-      token,
     });
   } catch (error) {
     console.error("OTP verification error:", error);
@@ -280,6 +303,7 @@ const verifyOTP = async (req, res) => {
       .json({ error: true, message: "Server error during OTP verification" });
   }
 };
+
 
 const resendOTP = async (req, res) => {
   const { email } = req.body; // Extract userId from params
@@ -330,6 +354,8 @@ const resendOTP = async (req, res) => {
       .json({ error: true, message: "Server error during OTP resend" });
   }
 };
+
+
 
 module.exports = {
   generateAndSendOTP,

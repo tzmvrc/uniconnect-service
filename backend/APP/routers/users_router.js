@@ -13,7 +13,7 @@ router.post("/logout", userController.logout);
 router.get("/check-auth", authMiddleware, userController.checkAuth);
 router.get("/get-user-info", authMiddleware, userController.getUserInfo);
 router.post("/forgot-password", userController.forgotPassword);
-router.post("/reset-password", userController.resetPassword);
+router.put("/reset-password", userController.resetPassword);
 router.get("/check-if-verified/:email", userController.checkIfVerified);
 router.get("/check-user-badge/:username", userController.checkUserBadge);
 router.put("/update-user-pass", authMiddleware, userController.updateUserPass);

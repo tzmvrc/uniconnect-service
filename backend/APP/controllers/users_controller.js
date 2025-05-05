@@ -4,6 +4,7 @@ const UserModel = require("../models/users_model");
 const Forum = require("../models/forums_model");
 const OTP = require("../models/otp_model");
 const SchoolModel = require("../models/schools_model");
+const TokenModel = require("../models/token_model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { forgotPasswordOtp, sendOTPEmail } = require("./OTP_controller");
@@ -244,7 +245,6 @@ const login = async (req, res) => {
     }
 
     const user = await UserModel.findOne({ email, isDeleted: false });
-
     if (!user) {
       return res.status(404).send({
         successful: false,
@@ -260,16 +260,31 @@ const login = async (req, res) => {
       });
     }
 
+    // Generate JWT
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "7h" }
     );
 
+    // Save or update token in separate token DB
+    await TokenModel.findOneAndUpdate(
+      { userId: user._id },
+      { token },
+      { upsert: true, new: true }
+    );
+
+    // Set token as HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 7 * 60 * 60 * 1000, // 7 hours
+    });
+
     return res.status(200).send({
       successful: true,
       message: "Login successful.",
-      token,
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -280,35 +295,46 @@ const login = async (req, res) => {
   }
 };
 
-const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
-    path: "/",
-  });
+const logout = async (req, res) => {
+  try {
+    const token = req.cookies?.token;
 
-  return res.status(200).send({
-    successful: true,
-    message: "Logout successful.",
-  });
+    if (token) {
+      // Decode token to get userId
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+      // Delete token from DB
+      await TokenModel.findOneAndDelete({ userId: decoded.userId });
+    }
+
+    // Clear cookie
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
+    return res.status(200).json({
+      successful: true,
+      message: "Logout successful.",
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({
+      successful: false,
+      message: "Something went wrong during logout.",
+    });
+  }
 };
 
+
 const checkAuth = (req, res) => {
-  const token = req.cookies.token;
+   let token = req.cookies?.token;
+  if (!token) return res.status(401).json({ successful: false, message: "Unauthorized" });
 
-  if (!token) {
-    return res
-      .status(401)
-      .json({ loggedIn: false, message: "Not Authenticated" });
-  }
+  return res.status(200).json({ successful: true, message: "Authorized" });
 
-  try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    return res.status(200).json({ loggedIn: true, user: decoded });
-  } catch (error) {
-    return res.status(401).json({ loggedIn: false, message: "Invalid token" });
-  }
+
 };
 
 // Forgot Password function
@@ -416,28 +442,12 @@ const updateUserPass = async (req, res) => {
 // Reset Password function
 const resetPassword = async (req, res) => {
   try {
-    const { email, newPassword, confirmPassword } = req.body;
+    const { email, password } = req.body;
 
-    if (!email?.trim() || !newPassword?.trim() || !confirmPassword?.trim()) {
+    if (!email?.trim() || !password?.trim()) {
       return res.status(400).send({
         successful: false,
-        message: "All fields are required.",
-      });
-    }
-
-    if (newPassword !== confirmPassword) {
-      return res.status(400).send({
-        successful: false,
-        message: "Passwords do not match.",
-      });
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      return res.status(400).send({
-        successful: false,
-        message:
-          "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a digit, and a special character.",
+        message: "Email and password are required.",
       });
     }
 
@@ -450,7 +460,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
     user.password = hashedPassword;
     await user.save();
 
