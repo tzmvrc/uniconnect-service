@@ -270,9 +270,10 @@ const login = async (req, res) => {
     // Save or update token in separate token DB
     await TokenModel.findOneAndUpdate(
       { userId: user._id },
-      { token },
+      { token, email: user.email },
       { upsert: true, new: true }
     );
+ 
 
     // Set token as HTTP-only cookie
     res.cookie("token", token, {
