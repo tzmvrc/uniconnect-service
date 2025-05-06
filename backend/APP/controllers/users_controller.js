@@ -685,14 +685,25 @@ const deleteOwnAccount = async (req, res) => {
       });
     }
 
+    // Soft delete account
     user.isDeleted = true;
-
     user.email = `deleted@Uniconnect.com`;
     user.first_name = "USER";
     user.last_name = "DELETED";
     user.username = `Deleted_User`;
     user.profilePicture = null;
     await user.save();
+
+    // Remove token from DB (if using a token model)
+    await TokenModel.findOneAndDelete({ userId });
+
+    // Clear auth cookie
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
+    });
 
     return res.status(200).json({
       success: true,
@@ -706,7 +717,6 @@ const deleteOwnAccount = async (req, res) => {
     });
   }
 };
-
 const uploadProfilePicture = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({
