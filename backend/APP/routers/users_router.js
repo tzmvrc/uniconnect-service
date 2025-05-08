@@ -10,6 +10,7 @@ const { upload, handleUploadErrors } = require("../../cloudinary/multerConfig");
 router.post("/signup", userController.signup);
 router.post("/login", userController.login);
 router.post("/logout", userController.logout);
+router.get("/search-user", userController.searchUser);
 router.get("/check-auth", authMiddleware, userController.checkAuth);
 router.get("/get-user-info", authMiddleware, userController.getUserInfo);
 router.post("/forgot-password", userController.forgotPassword);

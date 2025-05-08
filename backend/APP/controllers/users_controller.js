@@ -56,6 +56,43 @@ const getUserInfo = async (req, res) => {
   }
 };
 
+const searchUser = async (req, res) => {
+  const { username } = req.query;
+
+  try {
+    // Find users matching the username and populate the school name
+    const users = await UserModel.find({
+      username: { $regex: username, $options: "i" }, isDeleted: false,
+    }).populate("school_id", "school_name"); // Populate only school_name field
+
+    // For each user, count their public, non-archived forums
+    const usersWithForumCount = await Promise.all(
+      users.map(async (user) => {
+        const forumCount = await Forum.countDocuments({
+          created_by: user._id,
+          isArchived: false,
+          public: true,
+        });
+
+        return {
+          ...user.toObject(),
+          forumCount,
+        };
+      })
+    );
+
+    res.json({ success: true, users: usersWithForumCount });
+  } catch (err) {
+    console.error("Error searching for users:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Error searching for users" });
+  }
+};
+
+
+
+
 //Other user
 const getOtherUserInfo = async (req, res) => {
   const { username } = req.params;
@@ -273,13 +310,12 @@ const login = async (req, res) => {
       { token, email: user.email },
       { upsert: true, new: true }
     );
- 
 
     // Set token as HTTP-only cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
+      sameSite: "Lax",
       maxAge: 7 * 60 * 60 * 1000, // 7 hours
     });
 
@@ -312,7 +348,7 @@ const logout = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
+      sameSite: "Strict",
     });
 
     return res.status(200).json({
@@ -702,7 +738,7 @@ const deleteOwnAccount = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: true,
-      sameSite: "None",
+      sameSite: "Lax",
       path: "/",
     });
 
@@ -718,6 +754,8 @@ const deleteOwnAccount = async (req, res) => {
     });
   }
 };
+
+
 const uploadProfilePicture = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({
@@ -785,6 +823,7 @@ const uploadProfilePicture = async (req, res) => {
 
 module.exports = {
   getUserInfo,
+  searchUser,
   signup,
   login,
   logout,
