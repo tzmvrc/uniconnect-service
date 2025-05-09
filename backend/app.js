@@ -20,6 +20,7 @@ const responseRouter = require("./APP/routers/responses_router");
 const announcementRouter = require("./APP/routers/announcement_router");
 const notificationRouter = require("./APP/routers/notification_router");
 const leaderboardsRouter = require("./APP/routers/leaderboards_router");
+const badwordsRouter = require("./APP/routers/badwords_router");
 
 // INITIALIZE EXPRESS APP
 const app = express();
@@ -53,10 +54,6 @@ app.use(
   express.urlencoded({ extended: true, limit: "50mb", parameterLimit: 50000 })
 ); // Parses URL-encoded payloads
 
-// HEALTH CHECK ROUTE (to keep server awake)
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ message: 'Server is healthy', time: new Date().toISOString() });
-});
 
 // ROUTES
 app.use("/users", userRouter);
@@ -68,6 +65,7 @@ app.use("/response", responseRouter);
 app.use("/announcement",announcementRouter);
 app.use("/notification",notificationRouter);
 app.use("/leaderboard",leaderboardsRouter);
+app.use("/badwords",badwordsRouter);
 
 // HANDLE UNKNOWN ROUTES
 app.use((req, res, next) => {

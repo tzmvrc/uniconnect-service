@@ -60,12 +60,15 @@ const searchUser = async (req, res) => {
   const { username } = req.query;
 
   try {
-    // Find users matching the username and populate the school name
     const users = await UserModel.find({
-      username: { $regex: username, $options: "i" }, isDeleted: false,
-    }).populate("school_id", "school_name"); // Populate only school_name field
+      $or: [
+        { username: { $regex: username, $options: "i" } },
+        { first_name: { $regex: username, $options: "i" } },
+        { last_name: { $regex: username, $options: "i" } },
+      ],
+      isDeleted: false,
+    }).populate("school_id", "school_name");
 
-    // For each user, count their public, non-archived forums
     const usersWithForumCount = await Promise.all(
       users.map(async (user) => {
         const forumCount = await Forum.countDocuments({
@@ -89,6 +92,7 @@ const searchUser = async (req, res) => {
       .json({ success: false, message: "Error searching for users" });
   }
 };
+
 
 
 
@@ -297,7 +301,15 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate JWT
+    // Check if the user is verified
+    if (!user.isVerified) {
+      return res.status(403).send({
+        successful: false,
+        message: "Account not verified. Please verify your email first.",
+      });
+    }
+
+    // Generate JWT token since the user is verified
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.ACCESS_TOKEN_SECRET,
@@ -331,6 +343,7 @@ const login = async (req, res) => {
     });
   }
 };
+
 
 const logout = async (req, res) => {
   try {
@@ -728,7 +741,7 @@ const deleteOwnAccount = async (req, res) => {
     user.first_name = "USER";
     user.last_name = "DELETED";
     user.username = `Deleted_User`;
-    user.profilePicture = null;
+    user.profilePicture = "https://res.cloudinary.com/dlbclsvt5/image/upload/v1746791437/profile-picture/profile-pictures/681da3e13f35169ff3c1a102_1746791435175_avatar.png";
     await user.save();
 
     // Remove token from DB (if using a token model)

@@ -59,7 +59,8 @@ const UserSchema = new Schema(
     },
     profilePicture: {
       type: String,
-      default: null, // Store Cloudinary URL or null if no picture
+      default:
+        "https://res.cloudinary.com/dlbclsvt5/image/upload/v1746791437/profile-picture/profile-pictures/681da3e13f35169ff3c1a102_1746791435175_avatar.png",
     },
     profilePicturePublicId: {
       type: String,

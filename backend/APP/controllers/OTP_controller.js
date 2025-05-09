@@ -40,7 +40,7 @@ const sendOTPEmail = async ({ email }) => {
     const newOtp = new OTP({
       email,
       otp: hashedOtp,
-      expiresAt: Date.now() + 3600000, // 1 hour
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     await newOtp.save();
@@ -49,7 +49,7 @@ const sendOTPEmail = async ({ email }) => {
       from: process.env.AUTH_EMAIL,
       to: email,
       subject: "Uniconnect Verification Code",
-      text: `Your verification code is: ${otpValue} This code is valid for 5 mins. Use this code to verify your account.`,
+      text: `Your verification code is: ${otpValue} This code is valid for 5 minutes. Use this code to verify your account.`,
     });
 
     console.log(`✅ OTP sent successfully to ${email}`);
@@ -95,7 +95,7 @@ const sendOtpWithSchoolValidation = async (req, res) => {
     const newOtp = new OTP({
       email: oldEmail,
       otp: hashedOtp,
-      expiresAt: Date.now() + 3600000, // 1 hour
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     await newOtp.save();
@@ -194,7 +194,7 @@ const forgotPasswordOtp = async ({ email }) => {
     const newOtp = new OTP({
       email,
       otp: hashedOtp,
-      expiresAt: Date.now() + 3600000, // 1 hour
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     await newOtp.save();
@@ -204,7 +204,7 @@ const forgotPasswordOtp = async ({ email }) => {
       from: process.env.AUTH_EMAIL,
       to: email,
       subject: "Uniconnect Forgot Password Code",
-      text: `Your verification code is: ${otpValue}. This code is valid for 1 hour. Use this code to verify your email.`,
+      text: `Your verification code is: ${otpValue}. This code is valid for 5 minutes. Use this code to verify your email.`,
     });
 
     console.log(`✅ OTP sent successfully to ${email}`);
@@ -278,12 +278,11 @@ const verifyOTP = async (req, res) => {
     );
 
     // Save or update token in separate token DB
-    await TokenModel.findOneAndUpdate(
-      { userId: user._id },
-      { token, email: user.email },
-      { upsert: true, new: true }
-    );
- 
+   await TokenModel.findOneAndUpdate(
+     { userId: user._id },
+     { token, email: user.email },
+     { upsert: true, new: true }
+   );
 
     // Set token as HTTP-only cookie
     res.cookie("token", token, {
@@ -329,7 +328,7 @@ const resendOTP = async (req, res) => {
       email,
       otp: hashedOtp,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 3600000, // New OTP expires in 1 hour
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     await newOtpVerification.save();

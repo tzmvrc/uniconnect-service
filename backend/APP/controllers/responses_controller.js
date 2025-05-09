@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const Notification = require("../models/notification_model");
 const User = require("../models/users_model");
 const School = require("../models/schools_model");
+const { containsBadWords } = require("./badword_controller");
 
 // Create a response (comment on a forum)
 const createResponse = async (req, res) => {
@@ -34,7 +35,16 @@ const createResponse = async (req, res) => {
       return res.status(404).json({ message: "Forum not found" });
     }
 
-    // Create response
+    // Check if the comment contains any bad words
+    const isBadComment = await containsBadWords(comment);
+    if (isBadComment) {
+      return res.status(400).json({
+        success: false,
+        message: "Your response contains inappropriate language.",
+      });
+    }
+
+    // Create response if no bad words are found
     const response = new Response({
       created_by: userId,
       forum_id,
@@ -70,6 +80,7 @@ const createResponse = async (req, res) => {
   }
 };
 
+
 // Get all responses for a forum
 const getResponsesByForum = async (req, res) => {
   try {
@@ -98,7 +109,7 @@ const updateResponse = async (req, res) => {
     const userId = req.user.userId;
 
     if (!mongoose.Types.ObjectId.isValid(response_id)) {
-      return res.status(400).json({ message: "Invalid response ID" });
+      return res.json({ message: "Invalid response ID" });
     }
 
     const response = await Response.findOne({
@@ -107,8 +118,17 @@ const updateResponse = async (req, res) => {
     });
 
     if (!response) {
-      return res.status(404).json({
+      return res.json({
         message: "Response not found or unauthorized",
+      });
+    }
+
+    // Check for bad words before proceeding with the update
+    const hasBadWords = await containsBadWords(comment);
+    if (hasBadWords) {
+      return res.json({
+        message:
+          "Your comment contains inappropriate language. Please modify it.",
       });
     }
 
@@ -119,7 +139,7 @@ const updateResponse = async (req, res) => {
       // Save the response, which automatically updates the updatedAt field
       await response.save();
 
-      return res.status(200).json({
+      return res.json({
         message: "Response updated successfully",
         updated: true,
         response,
@@ -127,16 +147,18 @@ const updateResponse = async (req, res) => {
     }
 
     // Return a message when no changes are made
-    return res.status(200).json({
+    return res.json({
       message: "No changes were made",
       updated: false,
       response,
     });
   } catch (error) {
     console.error("Error in updateResponse:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.json({ message: "Server error", error: error.message });
   }
 };
+
+
 
 
 // Delete a response (only the owner can delete their response)
@@ -205,16 +227,15 @@ const likeResponse = async (req, res) => {
     }
 
     let notificationCreated = false;
-    let pointsChanged = false;
 
-    // ✅ Toggle like (if already liked, remove it)
+    // If user already liked, remove the like (unlike)
     if (response.liked_by.includes(userId)) {
       response.liked_by = response.liked_by.filter(
         (id) => id.toString() !== userId
       );
       response.likes -= 1;
     } else {
-      // ✅ Remove dislike if previously disliked
+      // Remove dislike if previously disliked
       if (response.disliked_by.includes(userId)) {
         response.disliked_by = response.disliked_by.filter(
           (id) => id.toString() !== userId
@@ -222,50 +243,44 @@ const likeResponse = async (req, res) => {
         response.dislikes -= 1;
       }
 
-      // ✅ Add like
+      // Add like
       response.liked_by.push(userId);
       response.likes += 1;
-      pointsChanged = true;
 
-      // ✅ Create notification asynchronously
+      // ✅ Create Notification if valid
       if (response.created_by.toString() !== userId) {
+        await Notification.create({
+          userId: response.created_by,
+          type: "response_like",
+          sourceId: response._id,
+          sourceType: "response",
+          senderId: userId,
+        });
         notificationCreated = true;
       }
     }
 
-    // ✅ Save updated response
+    // ✅ Save the updated response
     await response.save({ timestamps: false });
 
-
+    // ✅ Calculate and save updated user points excluding the author's own likes
     let updatedPoints = null;
-
-    if (pointsChanged) {
+    if (response.created_by.toString() !== userId.toString()) {
       updatedPoints = await calculateUserPoints(response.created_by);
     }
 
-    // ✅ Send response
     res.status(200).json({
       message: "Response updated",
       response,
       notificationCreated,
       updatedPoints,
     });
-
-    // ✅ Create notification (async, does not block response)
-    if (notificationCreated) {
-      await Notification.create({
-        userId: response.created_by,
-        type: "response_like",
-        sourceId: response._id,
-        sourceType: "response",
-        senderId: userId,
-      });
-    }
   } catch (error) {
     console.error("❌ Error in likeResponse:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 const dislikeResponse = async (req, res) => {
   try {
