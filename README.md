@@ -90,10 +90,10 @@ This project was developed as part of an **academic and learning initiative**, f
 
 ## 👤 Author
 
-**Marc Aspa**
-**Samantha Paradero**
-**Lawrence De Guia**
-**Chasie Caduhada**
+**Marc Aspa** <br>
+**Samantha Paradero**<br>
+**Lawrence De Guia**<br>
+**Chasie Caduhada**<br>
 **Joshua Natino**
 
 
